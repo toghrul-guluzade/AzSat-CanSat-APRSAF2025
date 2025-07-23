@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CanSat Ground Station (Web – fixed layout)</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font:14px/1.4 "Inter",Arial,Helvetica,sans-serif;color:#444;background:#f4f6fa;overflow:hidden}
+:root{
+  --blue:#4A6FFF;--blue-light:#5A7FFF;--green:#28A745;--yellow:#FFC107;--red:#DC3545;
+  --card-bg:#FAFAFA;--muted:#777;--border:#E5E5E5;--radius:6px;
+}
+header{padding:8px 16px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center}
+header h1{font-size:20px;font-weight:700}
+header span{margin-left:auto;font-size:13px;color:var(--muted)}
+main{height:100%;display:flex;flex-direction:column;gap:10px;padding:10px;min-height:0}
+.topSplit{flex:1 0 auto;display:flex;gap:10px;min-height:0}
+#leftCol{flex:1;display:flex;flex-direction:column;gap:10px;min-width:300px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:160px;gap:10px;min-height:0}
+.metric{position:relative;border:2px solid var(--blue);border-radius:8px;background:#fff}
+.metric header{position:absolute;inset:0 0 auto 0;height:35px;background:var(--blue);color:#fff;font-weight:600;
+               display:flex;justify-content:center;align-items:center;border-top-left-radius:6px;border-top-right-radius:6px}
+.metric .val{position:absolute;inset:35px 0 0 0;display:flex;justify-content:center;align-items:center;
+            font-size:36px;font-weight:700;color:var(--blue)}
+.metric[data-type="ALT"]{--blue:#2E8B57}.metric[data-type="BAT"]{--blue:#CD853F}
+#oriCanvas{width:100%;height:100%;background:#f0f8ff;border-radius:8px;border:2px solid #4682B4}
+#rightCol{flex:3;display:flex;flex-direction:column;gap:10px;min-height:0;overflow:hidden}
+.top-panels{flex:1 0 38%;display:flex;gap:10px;min-height:0}
+.panel{flex:1;background:var(--card-bg);border-radius:var(--radius);
+       display:flex;flex-direction:column;padding:12px;overflow:hidden}
+.panel h2{font-size:15px;font-weight:700;color:#26348B;margin-bottom:6px}
+.sep{height:1px;background:var(--border);margin:6px 0}
+.mid-panels{flex:0 0 18%;display:flex;gap:10px}
+.mid-panels .sub{flex:1;background:#fff;border-radius:8px;padding:10px;display:flex;flex-direction:column;font-size:12px;overflow:hidden}
+.mid-panels .sub h3{font-size:14px;font-weight:700;text-align:center;margin-bottom:4px}
+.progress{width:100%;height:14px;border:1px solid #888;border-radius:6px;overflow:hidden}
+.progress span{display:block;height:100%;background:#4CAF50;text-align:center;font-size:11px;color:#fff}
+.bottom{flex:0 0 44%;display:flex;gap:10px;min-height:0}
+#graphs{flex:2;display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:8px;min-height:0}
+.chart-box{background:#fff;border:1px solid #555;border-radius:8px;padding:4px;display:flex;flex-direction:column;min-height:0}
+.chart-box canvas{flex:1 !important;min-height:0}
+#logs{flex:1;display:flex;flex-direction:column;background:#f5f5f5;border:1px solid #888;border-radius:8px;min-height:0}
+#logs header{font-size:16px;font-weight:700;text-align:center;background:#d0d0d0;padding:4px;
+             border-top-left-radius:8px;border-top-right-radius:8px}
+#logArea{flex:1;overflow:auto;background:#fff;font-family:Courier,monospace;font-size:11px;padding:6px}
+#logs .controls{padding:4px;display:flex;align-items:center;gap:6px;font-size:12px}
+.panel label{font-size:11px;color:var(--muted)}
+.value{font-weight:600}
+#mission .phase{font-weight:700;background:#E8E8E8;padding:6px;border-radius:4px;text-align:center;margin-bottom:6px}
+.time-row{display:flex;gap:20px;font-size:12px;margin-bottom:6px}
+.telemetry-grid{display:grid;grid-template-columns:auto auto;row-gap:6px}
+.telemetry-grid div{display:flex;justify-content:space-between;align-items:center;font-size:12px}
+#mission .event{font-size:12px;margin-top:auto}
+.status-item{display:flex;align-items:center;justify-content:space-between;font-size:12px;margin-bottom:6px}
+.status-dot{font-size:16px;margin-right:8px}
+#command .cmd-row{display:flex;align-items:center;margin-bottom:8px;font-size:12px}
+#command select,#command input{flex:1;padding:2px 5px;border:1px solid #DDD;border-radius:3px;font-size:12px}
+#command button{margin-left:6px;background:var(--blue);border:none;color:#fff;padding:4px 10px;
+                border-radius:3px;font-size:12px;cursor:pointer}
+#command button:hover{background:var(--blue-light)}
+#command #abort{background:#FF3B30;font-weight:700}
+#command #abort:hover{background:#FF4B40}
+#command ul{flex:1;overflow:auto;font-size:11px;border:1px solid #DDD;border-radius:3px;padding:4px;margin-top:6px;background:#fff}
+#logArea::-webkit-scrollbar,#command ul::-webkit-scrollbar{width:6px}
+#logArea::-webkit-scrollbar-thumb,#command ul::-webkit-scrollbar-thumb{background:#bbb;border-radius:6px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header><h1>CanSat Ground Station</h1><span id="clock"></span></header>
+  <main>
+    <div class="topSplit">
+      <section id="leftCol">
+        <div class="metric-grid">
+          <div class="metric" data-type="ALT"><header>ALTITUDE</header><span class="val" id="altVal">--</span></div>
+          <div class="metric" data-type="VEL"><header>VELOCITY</header><span class="val" id="velVal">--</span></div>
+          <div class="metric" data-type="BAT"><header>BATTERY</header><span class="val" id="batVal">--</span></div>
+          <div id="oriCanvas"></div>
+        </div>
+      </section>
+      <section id="rightCol">
+        <div class="top-panels">
+          <div class="panel" id="mission">
+            <h2>🚀 MISSION STATUS</h2><div class="sep"></div>
+            <div class="phase" id="phaseVal">PRE-LAUNCH</div>
+            <div class="time-row">
+              <div><label>PHASE</label> <span class="value" id="phaseTime">00:00:00</span></div>
+              <div><label>MISSION</label> <span class="value" id="missionTime">00:00:00</span></div>
+            </div><div class="sep"></div>
+            <div class="telemetry-grid">
+              <div><label>VERTICAL SPEED</label><span id="vsVal">--</span></div>
+              <div><label>MAX ALTITUDE</label><span id="maxAlt">0.0 m</span></div>
+              <div><label>MAX VELOCITY</label><span id="maxVel">0.0 m/s</span></div>
+              <div><label>MAX DESCENT</label><span id="maxDes">0.0 m/s</span></div>
+              <div><label>APOGEE</label><span id="apogee">❌</span></div>
+            </div><div class="sep"></div>
+            <div class="event"><label>LAST EVENT </label><span class="value" id="lastEvent">None</span>
+              <small id="lastEvtTime"></small></div>
+          </div>
+          <div class="panel" id="system">
+            <h2>⚙️ SYSTEM STATUS</h2><div class="sep"></div>
+            <div class="status-item"><span><span class="status-dot" id="desDot">●</span>Descent Rate</span><span id="desVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="tmpDot">●</span>Temperature</span><span id="tmpVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="prsDot">●</span>Pressure</span><span id="prsVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="humDot">●</span>Humidity</span><span id="humVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="batDot">●</span>Battery</span><span id="batSysVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="pktDot">●</span>Packet Loss</span><span id="pktVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="sigDot">●</span>Signal (dBm)</span><span id="sigVal">--</span></div>
+            <div class="status-item"><span><span class="status-dot" id="ackDot">●</span>Cmd ACK Time</span><span id="ackVal">--</span></div>
+            <div class="sep"></div>
+            <div><label>HEALTH</label> <span class="value" id="healthSummary">All nominal</span></div>
+          </div>
+          <div class="panel" id="command" style="flex:1.2">
+            <h2>🎮 COMMAND CENTER</h2><div class="sep"></div>
+            <div class="cmd-row"><label>PARACHUTE&nbsp;</label>
+              <select id="paraSel"><option>OFF</option><option>DETACH</option><option>ATTACH</option></select>
+            </div>
+            <div class="cmd-row"><label>BUZZER&nbsp;</label>
+              <select id="buzSel"><option>OFF</option><option>SHORT</option><option>LONG</option><option>SOS</option></select>
+            </div>
+            <button id="abort" onclick="sendCmd()">SEND COMMAND</button>
+            <ul id="cmdHist"></ul>
+          </div>
+        </div>
+        <div class="mid-panels">
+          <div class="sub" id="conn">
+            <h3>CONNECTION STATUS</h3>
+            <div style="margin:4px 0">LoRa Signal:</div>
+            <div class="progress"><span id="sigBar" style="width:80%">80%</span></div>
+            <div style="margin-top:6px">Packets: <span id="pktCount">0</span>  Lost: <span id="lostCount">0</span></div>
+          </div>
+          <div class="sub">
+            <h3>DATA RECORDING</h3>
+            <div style="margin-bottom:6px">File: <code>data_log.csv</code></div>
+            <button style="align-self:flex-start" onclick="recToggle()" id="recBtn">Start Recording</button>
+          </div>
+        </div>
+      </section>
+    </div>
+    <div class="bottom">
+      <div id="graphs">
+        <div class="chart-box"><canvas id="tempChart"></canvas></div>
+        <div class="chart-box"><canvas id="presChart"></canvas></div>
+        <div class="chart-box"><canvas id="humChart"></canvas></div>
+        <div class="chart-box"><canvas id="lightChart"></canvas></div>
+        <div class="chart-box"><canvas id="batChart"></canvas></div>
+        <div class="chart-box"><canvas id="accChart"></canvas></div>
+      </div>
+      <div id="logs">
+        <header>SYSTEM LOGS</header>
+        <div id="logArea"></div>
+        <div class="controls"><label><input type="checkbox" id="autosc" checked>Auto-scroll</label>
+          <button onclick="clearLogs()">Clear</button></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+
+let roll = 0, pitch = 0, yaw = 0;
+const alpha = 0.98;
+let lastT = performance.now();
+
+function updateIMU(accX,accY,accZ, gyrX,gyrY,gyrZ) {
+  const now = performance.now(), dt = (now - lastT)/1000; // s
+  lastT = now;
+  const rollAcc  =  Math.atan2(accY, accZ);
+  const pitchAcc = -Math.atan2(accX, Math.hypot(accY, accZ));
+  roll  += gyrX * dt;
+  pitch += gyrY * dt;
+  yaw   += gyrZ * dt;
+  roll  = alpha * roll  + (1-alpha) * rollAcc;
+  pitch = alpha * pitch + (1-alpha) * pitchAcc;
+  return {
+    rollDeg  : roll  * 180/Math.PI,
+    pitchDeg : pitch * 180/Math.PI,
+    yawDeg   : yaw   * 180/Math.PI
+  };
+}
+
+let file_text = ''
+const socket = new WebSocket("ws://127.0.0.1:8000")
+let data = {}
+
+socket.onopen = () => {
+  console.log("connected to websocket")
+}
+
+socket.onmessage = async event => {
+  try {
+    data = JSON.parse(event.data)
+  } catch (error) {
+    console.log("unable to read data")
+  }
+}
+
+
+(function init () {
+  const $ = id => document.getElementById(id);
+  const [
+    phaseVal, phaseTime, missionTime,  vsVal,
+    maxAltElem, maxVelElem, maxDesElem, apogeeElem,
+    lastEvent,  lastEvtTime,  healthSummary,
+    desDot, tmpDot, prsDot, humDot, batDot, pktDot, sigDot, ackDot,
+    desVal, tmpVal, prsVal, humVal, batSysVal, pktVal, sigVal, ackVal,
+    altVal, velVal, batVal, sigBar, pktCount, lostCount,
+    cmdHist, paraSel, buzSel, custInp, recBtn, logArea, autosc, clock,
+    oriCanvas
+  ] = [
+    'phaseVal','phaseTime','missionTime','vsVal',
+    'maxAlt','maxVel','maxDes','apogee',
+    'lastEvent','lastEvtTime','healthSummary',
+    'desDot','tmpDot','prsDot','humDot','batDot','pktDot','sigDot','ackDot',
+    'desVal','tmpVal','prsVal','humVal','batSysVal','pktVal','sigVal','ackVal',
+    'altVal','velVal','batVal','sigBar','pktCount','lostCount',
+    'cmdHist','paraSel','buzSel','custInp','recBtn','logArea','autosc','clock',
+    'oriCanvas'
+  ].map($);
+  setInterval(() => { clock.textContent = new Date().toLocaleString(); }, 1_000);
+  const TITLES = ['Temperature','Pressure','Humidity','Light','Battery','Velocity'];
+  const COLORS = ['#f75d59','#5d8df7','#4caf50','#ffb400','#cd853f','#9c27b0'];
+  const CANVAS = ['tempChart','presChart','humChart','lightChart','batChart','accChart'];
+  const mkChart = (ctx,col,title)=>new Chart(ctx,{type:'line',
+    data:{labels:Array(60).fill(''),
+      datasets:[{borderColor:col,borderWidth:2,pointRadius:0,data:Array(60).fill(null)}]},
+    options:{animation:false,plugins:{legend:{display:false},
+      title:{display:true,text:title,color:'#333',font:{size:12,weight:'600'}}},
+      scales:{x:{display:false},y:{display:true}}}});
+  const charts = CANVAS.map((id,i)=>mkChart($(id).getContext('2d'),COLORS[i],TITLES[i]));
+  const push   = (ch,v)=>{const d=ch.data.datasets[0].data;d.push(v);if(d.length>60)d.shift();ch.update('none');};
+  const log = (msg,lvl='INFO')=>{
+    const log_msg = `[${new Date().toLocaleTimeString()}] [${lvl}] ${msg}`
+    if (recording)
+      file_text += log_msg + '\n'
+    const clr={INFO:'#000',WARNING:'#FF6600',ERROR:'#DC3545',SUCCESS:'#28A745'}[lvl]||'#000';
+    logArea.insertAdjacentHTML('beforeend',
+      `<span style="color:${clr}">${log_msg}</span><br>`);
+    if(autosc.checked)logArea.scrollTop=logArea.scrollHeight;
+  };
+  window.clearLogs = () => { logArea.innerHTML=''; };
+  let pktid = 0
+  function sendCmd(type){
+    pktid++
+    cmd = `${pktid},1,${buzSel.selectedIndex},${paraSel.selectedIndex}`
+    buzSel.value = paraSel.value = 'OFF'
+    console.log(cmd)
+      socket.send(cmd)
+    const li=document.createElement('li');
+    li.textContent=`⏳ ${new Date().toLocaleTimeString()} - ${type}: ${val}`;
+    cmdHist.prepend(li); if(cmdHist.children.length>50)cmdHist.lastChild.remove();
+    log(`Command sent: ${type}:${val}`);
+    setTimeout(()=>ack(li),1_000+Math.random()*2_000);      // fake ACK
+  }
+  function ack(li){
+    const ok=Math.random()>0.1;
+    li.textContent=li.textContent.replace('⏳',ok?'✅':'❌');
+    li.style.color=ok?'var(--green)':'var(--red)';
+    log(ok?'Command acknowledged':'Command failed', ok?'SUCCESS':'ERROR');
+  }
+  window.abortAll = () => {
+    [...cmdHist.children].forEach(li=>{
+      li.textContent='🔄 '+li.textContent.slice(2);
+      li.style.color='#0275D8';
+    });
+    log('ABORT ALL COMMANDS requested','WARNING');
+  };
+  let recording=false;
+function saveTextFile(filename, text) {
+  const blob = new Blob([text], { type: 'text/plain' });        // or "text/csv", "application/json", …
+  const url  = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+  window.recToggle=()=>{
+    recording=!recording;
+    if (!recording) {
+      saveTextFile(`data_log${new Date().toLocaleTimeString()}.txt`, file_text)
+      file_text = ''
+    }
+    recBtn.textContent=recording?'Stop Recording':'Start Recording';
+    recBtn.style.background=recording?'#f44336':'';
+    log(recording?'Recording started':'Recording stopped','INFO');
+  };
+  const scene   = new THREE.Scene();
+  const camera  = new THREE.PerspectiveCamera(45, oriCanvas.clientWidth/oriCanvas.clientHeight, 0.1, 100);
+  camera.position.set(0,0,4);
+  const renderer= new THREE.WebGLRenderer({alpha:true,antialias:true});
+  renderer.setSize(oriCanvas.clientWidth, oriCanvas.clientHeight);
+  oriCanvas.appendChild(renderer.domElement);
+  const cube    = new THREE.Mesh(
+                    new THREE.BoxGeometry(1,1,1),
+                    new THREE.MeshNormalMaterial({wireframe:false}));
+  cube.rotation.order='ZYX';
+  scene.add(cube);
+  const onResize=()=>{
+    const w=oriCanvas.clientWidth, h=oriCanvas.clientHeight;
+    camera.aspect=w/h; camera.updateProjectionMatrix();
+    renderer.setSize(w,h);
+  };
+  window.addEventListener('resize', onResize);
+  const renderLoop=()=>{renderer.render(scene,camera);requestAnimationFrame(renderLoop);};
+  renderLoop();
+  let tick=0,maxAlt=0,maxVel=0,maxDes=0,startMission,startPhase,totalPkt=0,lostPkt=0;
+  const dots={des:desDot,tmp:tmpDot,prs:prsDot,hum:humDot,bat:batDot,pkt:pktDot,sig:sigDot,ack:ackDot};
+  const setDot=(d,bad,warn=false)=>{d.style.color=bad?'var(--red)':warn?'var(--yellow)':'var(--green)';d.dataset.st=bad?'err':warn?'warn':'ok';};
+  const fmtTime=ms=>{const s=ms/1e3|0,h=s/3600|0,m=(s%3600)/60|0,sec=s%60;return[h,m,sec].map(v=>String(v).padStart(2,'0')).join(':');};
+  const rnd=(a,b)=>Math.random()*(b-a)+a;
+  last = Date.now()
+  f = true
+  function telemetry(){
+    console.log(data.total, data.lost)
+    const fault=tick%10===0;
+    const alt = data.altitude;
+    const vel = data.velocity;
+    const bat = data.battery_voltage;
+    const temp = data.temperature;
+    const hum = data.humidity;
+    const pres = data.pressure;
+    const light = data.light;
+    const roll=rnd(-45,45), pitch=rnd(-45,45), yaw=rnd(-180,180);
+    landed = false
+    if (Math.abs(vel) <= 1) {
+      if (f && Date.now() - last >= 5) landed = true
+      else if (!f) f = true, last = Date.now();
+    } else landed = f = false, last = Date.now();
+    tick++;
+    altVal.textContent=alt.toFixed(1)+' m';
+    velVal.textContent=vel.toFixed(1)+' m/s';
+    batVal.textContent=bat.toFixed(2)+' V';
+    if(!startMission) startMission=startPhase=Date.now();
+    missionTime.textContent=fmtTime(Date.now()-startMission);
+    phaseTime.textContent  =fmtTime(Date.now()-startPhase);
+    let phase='PRE-LAUNCH';
+    if(landed)phase='LANDED';
+    else if(vel>1)phase='ASCENDING';
+    else if(vel<-1)phase='DESCENDING';
+    else phase='APOGEE';
+    if(phaseVal.textContent!==phase){
+      phaseVal.textContent=phase; startPhase=Date.now();
+      lastEvent.textContent=phase; lastEvtTime.textContent='@ '+new Date().toLocaleTimeString();
+      if(phase==='APOGEE') apogeeElem.textContent='✅';
+    }
+    if(alt>maxAlt){maxAlt=alt;maxAltElem.textContent=alt.toFixed(1)+' m';}
+    if(vel>maxVel){maxVel=vel;maxVelElem.textContent=vel.toFixed(1)+' m/s';}
+    if(vel<maxDes){maxDes=vel;maxDesElem.textContent=vel.toFixed(1)+' m/s';}
+    vsVal.textContent=(vel>0?'↑ ':'↓ ')+vel.toFixed(1)+' m/s';
+    vsVal.style.color=vel>0?'var(--green)':'var(--red)';
+    desVal.textContent=vel.toFixed(1)+' m/s';
+    tmpVal.textContent=temp.toFixed(1)+' °C';
+    prsVal.textContent=pres.toFixed(1)+' hPa';
+    humVal.textContent=hum.toFixed(1)+' %';
+    batSysVal.textContent=bat.toFixed(2)+' V';
+    setDot(desDot,vel<-10||vel>-5);
+    setDot(tmpDot,temp<-30||temp>70);
+    setDot(prsDot,fault);
+    setDot(humDot,hum<20||hum>80);
+    setDot(batDot,bat<3.3,bat<4);
+    const pktLoss=data.lost / data.total * 100;
+    pktVal.textContent=pktLoss.toFixed(1)+' %'; setDot(pktDot,pktLoss>10,pktLoss>5);
+    const rssi=-60-Math.floor(Math.random()*60);
+    sigVal.textContent=rssi+' dBm'; setDot(sigDot,rssi<-120,rssi<-90);
+    const ackT=rnd(0.5,3.5);
+    ackVal.textContent=ackT.toFixed(1)+' s'; setDot(ackDot,ackT>3,ackT>2.4);
+    const st=[...Object.values(dots)].map(d=>d.dataset.st);
+    if(st.includes('err'))      {healthSummary.textContent='Errors detected';healthSummary.style.color='var(--red)';}
+    else if(st.includes('warn')){healthSummary.textContent='Warnings detected';healthSummary.style.color='var(--yellow)';}
+    else                        {healthSummary.textContent='All nominal';    healthSummary.style.color='var(--green)';}
+    push(charts[0],temp); push(charts[1],pres); push(charts[2],hum);
+    push(charts[3],light); push(charts[4],bat);
+    push(charts[5],vel);
+    totalPkt++; pktCount.textContent=totalPkt;
+    if(Math.random()<0.02){lostPkt++; lostCount.textContent=lostPkt;}
+    const sigP = data.strength.toFixed(2);
+    //const sigP=Math.max(0,Math.min(100,parseInt(sigBar.style.width)+Math.floor(rnd(-5,5))));
+    sigBar.style.width=sigP+'%'; sigBar.textContent=sigP+'%';
+    const rot = updateIMU(
+      data.acc[0], data.acc[1], data.acc[2],
+      data.gyro[0], data.gyro[1], data.gyro[2]
+    )
+    cube.rotation.set(
+      THREE.MathUtils.degToRad(rot.pitchDeg),
+      THREE.MathUtils.degToRad(rot.yawDeg),
+      THREE.MathUtils.degToRad(rot.rollDeg)
+    );
+    if(tick%5===0)log(`ALT:${alt.toFixed(1)}m VEL:${vel.toFixed(1)}m/s BAT:${bat.toFixed(2)}V`);
+  }
+  window.sendCmd = sendCmd;
+  log('CanSat Ground Station started');
+  setInterval(telemetry,1_000);
+})();
+</script>
+</body>
+</html>
