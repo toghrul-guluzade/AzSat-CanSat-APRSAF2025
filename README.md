@@ -27,7 +27,7 @@ AzSat was developed as a multipurpose probe for **planetary and terrestrial expe
 4. **Landing** – Impact absorption & stabilization
 5. **Post-Landing** – Parachute detachment, solar alignment, and data collection
 
-![Mission Stages](images/mission_flow.png) <!-- Optional -->
+![Mission Stages](images/mission_flow.jpg) <!-- Optional -->
 
 ---
 
