@@ -223,6 +223,6 @@ MIT License – free to use, learn from, and modify. See [`LICENSE`](LICENSE).
 
 Special thanks to:
 
-* **Azercosmos Space Academy** – for continuous mentorship, training, and support
+* **Azercosmos Space Academy** – for continuous mentorship and support
 * **APRSAF CanSat Competition Organizers** – for the opportunity and an unforgettable international platform in **Wakayama, Japan**
 * Our supportive mentors, engineers & advisors
